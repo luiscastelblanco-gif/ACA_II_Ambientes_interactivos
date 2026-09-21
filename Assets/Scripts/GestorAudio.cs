@@ -27,8 +27,13 @@ public class GestorAudio : MonoBehaviour
     [Range(0f, 1f)]
     public float volumenGeneral = 0.85f;
 
+    [Tooltip("Cuantos sonidos 3D pueden sonar a la vez (botes del balon, porton)")]
+    public int voces3D = 6;
+
     private AudioSource[] fuentes;
     private int siguiente = 0;
+    private AudioSource[] fuentes3D;
+    private int siguiente3D = 0;
 
     void Awake()
     {
@@ -44,6 +49,25 @@ public class GestorAudio : MonoBehaviour
                 fuentes[i].playOnAwake = false;
                 fuentes[i].spatialBlend = 0f;
             }
+        }
+
+        // Voces 3D reutilizables (botes del balon, porton).
+        // Antes se usaba AudioSource.PlayClipAtPoint, que crea un GameObject con su
+        // AudioSource por cada sonido y despues lo destruye (medido: 200 sonidos = 200
+        // objetos creados). Ahora son fuentes fijas que se van reutilizando en anillo.
+        fuentes3D = new AudioSource[Mathf.Max(1, voces3D)];
+        for (int i = 0; i < fuentes3D.Length; i++)
+        {
+            GameObject voz = new GameObject("Voz3D_" + i);
+            voz.transform.SetParent(transform, false);
+            AudioSource s = voz.AddComponent<AudioSource>();
+            s.playOnAwake = false;
+            s.spatialBlend = 1f;                          // 3D
+            s.rolloffMode = AudioRolloffMode.Linear;
+            s.minDistance = 2f;
+            s.maxDistance = 25f;
+            s.volume = 1f;
+            fuentes3D[i] = s;
         }
     }
 
@@ -91,7 +115,13 @@ public class GestorAudio : MonoBehaviour
 
         if (espacial)
         {
-            AudioSource.PlayClipAtPoint(clip, posicion, v);   // fuente temporal, se destruye sola
+            if (fuentes3D == null || fuentes3D.Length == 0) return;
+
+            AudioSource voz = fuentes3D[siguiente3D];
+            siguiente3D = (siguiente3D + 1) % fuentes3D.Length;
+            voz.transform.position = posicion;
+            voz.pitch = Random.Range(0.96f, 1.04f);
+            voz.PlayOneShot(clip, v);
             return;
         }
 

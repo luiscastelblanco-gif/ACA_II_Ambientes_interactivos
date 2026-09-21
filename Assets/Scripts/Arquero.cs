@@ -57,6 +57,9 @@ public class Arquero : MonoBehaviour
     [Tooltip("Veces que la pelota lo toco (lo usa el juez)")]
     public int toques = 0;
     public bool lanzado = false;
+
+    [Tooltip("Referencia cacheada (antes se buscaba con GetComponent en cada lanzamiento)")]
+    private Animator animador;
     public bool saliendo = false;
     public float zPredicho = 0f;
 
@@ -119,8 +122,8 @@ public class Arquero : MonoBehaviour
                 // Animacion de lanzamiento: inclina el cuerpo hacia el lado al que va
                 if (!lanzado)
                 {
-                    Animator anim = GetComponent<Animator>();
-                    if (anim != null) anim.SetTrigger(zPredicho > rb.position.z ? "Derecha" : "Izquierda");
+                    if (animador == null) animador = GetComponent<Animator>();
+                    if (animador != null) animador.SetTrigger(zPredicho > rb.position.z ? "Derecha" : "Izquierda");
                 }
                 lanzado = true;
                 IrAXZ(xReposo, zPredicho, velocidadReaccion);

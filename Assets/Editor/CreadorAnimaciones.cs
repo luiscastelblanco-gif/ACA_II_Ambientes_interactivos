@@ -75,6 +75,22 @@ public static class CreadorAnimaciones
             lanzaIzq, "LanzaIzquierda", "Izquierda",
             lanzaDer, "LanzaDerecha", "Derecha");
 
+        // ---------------- 6) JUGADOR: Blend Tree de locomocion ----------------
+        // Los clips van EN BUCLE y se mezclan por el parametro float "Desplazamiento"
+        // (0 = quieto, 0.45 = caminando, 1 = corriendo). El jugador lo alimenta con su
+        // velocidad real desde JugadorTerceraPersona.
+        GameObject jugador = GameObject.Find("Jugador");
+        Transform cuerpoJugador = jugador != null ? jugador.transform.Find("Cuerpo") : null;
+        AnimatorController cJugador = null;
+        if (cuerpoJugador != null)
+        {
+            Vector3 baseCuerpo = cuerpoJugador.localPosition;
+            AnimationClip jQuieto = ClipJugador("Jugador_Quieto", baseCuerpo, 0.80f, 0.000f, 0f, 0f);
+            AnimationClip jCaminar = ClipJugador("Jugador_Caminar", baseCuerpo, 0.75f, 0.045f, 3f, 2.5f);
+            AnimationClip jCorrer = ClipJugador("Jugador_Correr", baseCuerpo, 0.45f, 0.100f, 8f, 4.5f);
+            cJugador = BlendTreeLocomocion("JugadorMovimiento", jQuieto, jCaminar, jCorrer);
+        }
+
         // ---------------- Conectar los Animator en la escena ----------------
         GameObject ui = GameObject.Find("UI_Juego");
         int conectados = 0;
@@ -103,6 +119,8 @@ public static class CreadorAnimaciones
 
         GameObject arq = GameObject.Find("Arquero");
         if (arq != null) { PonAnimator(arq, cArquero, false); conectados++; }
+
+        if (jugador != null && cJugador != null) { PonAnimator(jugador, cJugador, false); conectados++; }
 
         AssetDatabase.SaveAssets();
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
@@ -151,13 +169,14 @@ public static class CreadorAnimaciones
         AnimationUtility.SetEditorCurve(c, EditorCurveBinding.FloatCurve(ruta, tipo, propiedad), curva);
     }
 
-    private static void Cerrar(AnimationClip c)
+    private static void Cerrar(AnimationClip c, bool bucle = false)
     {
         // OJO: el bucle de un clip se controla con AnimationClipSettings, NO con wrapMode.
-        // Si el clip queda en bucle, el porton repite el cierre una y otra vez y el jugador
-        // se queda encerrado en la cancha (y los mensajes no paran de hacer el "pop").
+        // Los clips de los interactivos NO van en bucle (si el porton lo hiciera repetiria el
+        // cierre y el jugador quedaria encerrado). Los de locomocion del jugador SI van en bucle:
+        // son los que alimentan el Blend Tree.
         AnimationClipSettings ajustes = AnimationUtility.GetAnimationClipSettings(c);
-        ajustes.loopTime = false;
+        ajustes.loopTime = bucle;
         AnimationUtility.SetAnimationClipSettings(c, ajustes);
         EditorUtility.SetDirty(c);
     }
@@ -257,6 +276,65 @@ public static class CreadorAnimaciones
         return c;
     }
 
+    /// <summary>
+    /// Clip de locomocion del jugador: mueve el hijo "Cuerpo" (arriba/abajo) y lo inclina.
+    /// Va EN BUCLE porque alimenta el Blend Tree y se mezcla con los otros dos clips.
+    /// Se guardan las 3 componentes de cada vector para que el Animator no ponga 0 donde
+    /// no debe (la misma leccion que con el porton).
+    /// </summary>
+    private static AnimationClip ClipJugador(string nombre, Vector3 baseCuerpo, float dur,
+                                             float amplitudY, float inclinacionX, float balanceoZ)
+    {
+        AnimationClip c = NuevoAsset(nombre);
+        AnimationCurve sube = Suave(new Keyframe(0f, baseCuerpo.y),
+                                    new Keyframe(dur * 0.25f, baseCuerpo.y + amplitudY),
+                                    new Keyframe(dur * 0.50f, baseCuerpo.y),
+                                    new Keyframe(dur * 0.75f, baseCuerpo.y + amplitudY),
+                                    new Keyframe(dur, baseCuerpo.y));
+        AnimationCurve balanceo = Suave(new Keyframe(0f, 0f),
+                                        new Keyframe(dur * 0.25f, balanceoZ),
+                                        new Keyframe(dur * 0.50f, 0f),
+                                        new Keyframe(dur * 0.75f, -balanceoZ),
+                                        new Keyframe(dur, 0f));
+        Curva(c, "Cuerpo", typeof(Transform), "m_LocalPosition.x", Fijo(baseCuerpo.x));
+        Curva(c, "Cuerpo", typeof(Transform), "m_LocalPosition.y", sube);
+        Curva(c, "Cuerpo", typeof(Transform), "m_LocalPosition.z", Fijo(baseCuerpo.z));
+        Curva(c, "Cuerpo", typeof(Transform), "localEulerAnglesRaw.x", Fijo(inclinacionX));
+        Curva(c, "Cuerpo", typeof(Transform), "localEulerAnglesRaw.y", Fijo(0f));
+        Curva(c, "Cuerpo", typeof(Transform), "localEulerAnglesRaw.z", balanceo);
+        Cerrar(c, true);                     // EN BUCLE: es un clip de locomocion
+        return c;
+    }
+
+    /// <summary>
+    /// Blend Tree 1D del jugador: mezcla quieto / caminar / correr segun el parametro
+    /// float "Desplazamiento" (0 = quieto, 0.45 = caminando, 1 = corriendo).
+    /// Un Blend Tree sirve para esto: una sola animacion continua en vez de saltar
+    /// entre estados, y el umbral lo maneja la velocidad real del jugador.
+    /// </summary>
+    private static AnimatorController BlendTreeLocomocion(string nombre, AnimationClip quieto,
+                                                          AnimationClip caminar, AnimationClip correr)
+    {
+        AnimatorController ctrl = NuevoControl(nombre);
+        ctrl.AddParameter("Desplazamiento", AnimatorControllerParameterType.Float);
+
+        BlendTree arbol = new BlendTree();
+        arbol.name = "Locomocion";
+        arbol.blendType = BlendTreeType.Simple1D;
+        arbol.blendParameter = "Desplazamiento";
+        arbol.useAutomaticThresholds = false;
+        arbol.AddChild(quieto, 0f);
+        arbol.AddChild(caminar, 0.45f);
+        arbol.AddChild(correr, 1f);
+        AssetDatabase.AddObjectToAsset(arbol, ctrl);          // queda guardado dentro del .controller
+
+        AnimatorStateMachine sm = ctrl.layers[0].stateMachine;
+        AnimatorState st = Estado(sm, "Locomocion", arbol);
+        sm.defaultState = st;
+        EditorUtility.SetDirty(ctrl);
+        return ctrl;
+    }
+
     // ------------------------------------------------------------------
     // Controladores de animacion
     // ------------------------------------------------------------------
@@ -273,10 +351,10 @@ public static class CreadorAnimaciones
     /// propiedades que el clip NO anima. Como el clip del porton solo anima la Y, el Animator
     /// ponia x=0 y z=0 y el porton (que vive en z=12) aparecia en el MEDIO de la cancha.
     /// </summary>
-    private static AnimatorState Estado(AnimatorStateMachine sm, string nombre, AnimationClip clip)
+    private static AnimatorState Estado(AnimatorStateMachine sm, string nombre, Motion movimiento)
     {
         AnimatorState st = sm.AddState(nombre);
-        st.motion = clip;
+        st.motion = movimiento;
         st.writeDefaultValues = false;
         return st;
     }

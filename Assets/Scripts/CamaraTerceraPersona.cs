@@ -52,6 +52,13 @@ public class CamaraTerceraPersona : MonoBehaviour
     /// <summary>Angulo horizontal actual (util para orientar al jugador o al futuro arquero).</summary>
     public float Yaw { get { return yaw; } }
 
+    /// <summary>
+    /// Buffer reutilizable del raycast de la camara.
+    /// OJO: Physics.RaycastAll devolvia un array NUEVO en cada cuadro (medido: 100 bytes por
+    /// llamada, 0 con el buffer fijo) y esa basura la termina limpiando el recolector.
+    /// </summary>
+    private readonly RaycastHit[] impactosBuffer = new RaycastHit[16];
+
     void Start()
     {
         if (objetivo != null) yaw = objetivo.eulerAngles.y;
@@ -92,13 +99,14 @@ public class CamaraTerceraPersona : MonoBehaviour
             float largo = direccion.magnitude;
             if (largo > 0.01f)
             {
-                RaycastHit[] impactos = Physics.RaycastAll(pivote, direccion.normalized, largo, capasObstaculo, QueryTriggerInteraction.Ignore);
+                int encontrados = Physics.RaycastNonAlloc(pivote, direccion.normalized, impactosBuffer, largo,
+                                                          capasObstaculo, QueryTriggerInteraction.Ignore);
                 float distanciaLibre = largo;
-                for (int i = 0; i < impactos.Length; i++)
+                for (int i = 0; i < encontrados; i++)
                 {
-                    if (impactos[i].collider == null) continue;
-                    if (objetivo != null && impactos[i].collider.transform.root == objetivo.root) continue;
-                    if (impactos[i].distance < distanciaLibre) distanciaLibre = impactos[i].distance;
+                    if (impactosBuffer[i].collider == null) continue;
+                    if (objetivo != null && impactosBuffer[i].collider.transform.root == objetivo.root) continue;
+                    if (impactosBuffer[i].distance < distanciaLibre) distanciaLibre = impactosBuffer[i].distance;
                 }
                 if (distanciaLibre < largo)
                     deseada = pivote + direccion.normalized * Mathf.Max(0.6f, distanciaLibre - margenColision);

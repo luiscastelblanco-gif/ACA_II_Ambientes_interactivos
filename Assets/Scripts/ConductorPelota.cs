@@ -184,12 +184,31 @@ public class ConductorPelota : MonoBehaviour
         return d.normalized;
     }
 
+    private Rigidbody rbPelotaCache;
+    private Pelota pelotaDelCache;
+
+    /// <summary>
+    /// Rigidbody de la pelota cacheado.
+    /// Antes se hacia pelota.GetComponent&lt;Rigidbody&gt;() dentro de FixedUpdate, o sea
+    /// 50 busquedas por segundo sin necesidad. Ahora se busca una sola vez por pelota.
+    /// </summary>
+    private Rigidbody RigidbodyPelota()
+    {
+        if (pelota == null) return null;
+        if (rbPelotaCache == null || pelotaDelCache != pelota)
+        {
+            rbPelotaCache = pelota.GetComponent<Rigidbody>();
+            pelotaDelCache = pelota;
+        }
+        return rbPelotaCache;
+    }
+
     /// <summary>Dispara la pelota con la carga indicada (0..1). Devuelve false si no habia nada que disparar.</summary>
     public bool Disparar(float cargaDisparo)
     {
         if (!PelotaEnZonaDeControl()) return false;
 
-        Rigidbody rb = pelota.GetComponent<Rigidbody>();
+        Rigidbody rb = RigidbodyPelota();
         if (rb == null) return false;
 
         cargaDisparo = Mathf.Clamp01(cargaDisparo);
@@ -218,7 +237,7 @@ public class ConductorPelota : MonoBehaviour
         // Conducir: llevar la pelota pegada a los pies mientras este bajo control
         if (pelota == null || !pelota.enJuego || !pelota.gameObject.activeSelf) return;
 
-        Rigidbody rb = pelota.GetComponent<Rigidbody>();
+        Rigidbody rb = RigidbodyPelota();
         if (rb == null) return;
 
         if (bloqueoRestante > 0f) return;      // acaba de disparar: deja que el tiro salga

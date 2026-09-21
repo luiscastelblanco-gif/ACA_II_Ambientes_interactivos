@@ -48,6 +48,11 @@ public class JugadorTerceraPersona : MonoBehaviour
     private Vector3 direccionMovimiento;
     private bool espacioAntes;
 
+    private Animator animador;
+    private float desplazamiento = 0f;
+    private float desplazamientoEscrito = -1f;
+    private static readonly int HashDesplazamiento = Animator.StringToHash("Desplazamiento");
+
     /// <summary>Velocidad horizontal actual en m/s (util para animaciones o para saber si corre).</summary>
     public float RapidezActual { get { return new Vector2(velocidadActual.x, velocidadActual.z).magnitude; } }
 
@@ -57,6 +62,7 @@ public class JugadorTerceraPersona : MonoBehaviour
     void Awake()
     {
         cc = GetComponent<CharacterController>();
+        animador = GetComponent<Animator>();          // Blend Tree de locomocion (JugadorMovimiento)
     }
 
     void Update()
@@ -106,6 +112,27 @@ public class JugadorTerceraPersona : MonoBehaviour
             Quaternion objetivo = Quaternion.LookRotation(direccionMovimiento.normalized, Vector3.up);
             transform.rotation = Quaternion.Slerp(transform.rotation, objetivo, velocidadGiro * Time.deltaTime);
         }
+
+        // 7) Animacion: alimenta el Blend Tree de locomocion con la velocidad real
+        ActualizarAnimacion();
+    }
+
+    /// <summary>
+    /// Pasa la velocidad real al Blend Tree "Locomocion" (parametro float "Desplazamiento":
+    /// 0 = quieto, 0.45 = caminando, 1 = corriendo). El valor se suaviza y solo se escribe
+    /// cuando cambia de verdad, para no llamar a SetFloat en todos los cuadros al pepe.
+    /// </summary>
+    private void ActualizarAnimacion()
+    {
+        if (animador == null) return;
+
+        float objetivo = Mathf.Clamp01(RapidezActual / Mathf.Max(0.01f, velocidadCorrer));
+        desplazamiento = Mathf.MoveTowards(desplazamiento, objetivo, 4f * Time.deltaTime);
+
+        if (Mathf.Abs(desplazamiento - desplazamientoEscrito) < 0.01f) return;
+
+        desplazamientoEscrito = desplazamiento;
+        animador.SetFloat(HashDesplazamiento, desplazamiento);
     }
 
     /// <summary>

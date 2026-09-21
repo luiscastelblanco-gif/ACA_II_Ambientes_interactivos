@@ -15,7 +15,8 @@ animación y sonido) y se vuelve a abrir al terminar.
 | Nombre del ejecutable | `Penales.exe` (product name: *Penales*, versión 0.1.0) |
 | Plataforma | Windows 64-bit |
 | Scripts | 11 de juego + 5 de editor |
-| Sonido / animación | 10 efectos (WAV generados por código) + 9 clips + 5 controladores |
+| Sonido / animación | 10 efectos (WAV generados por código) + 12 clips + 6 controladores (incluye el **Blend Tree** del jugador) |
+| Optimización | Perfilado antes/después documentado en [`ENTREGABLE-2-Optimizacion.md`](ENTREGABLE-2-Optimizacion.md) |
 
 **Contenido:** 1. De qué trata el juego · 2. Qué necesitás · 3. Cómo ejecutarlo (editor y `.exe`) ·
 4. Controles · 5. La ronda paso a paso · 6. Sonido y animación · 7. Estructura del proyecto ·
@@ -160,12 +161,14 @@ Están siempre visibles abajo a la derecha en pantalla (guía de comandos del HU
 ## 6. Sonido y animación de cada interactivo
 
 No se usaron assets externos: **los 10 sonidos son WAV sintetizados por código**
-(`Penales → Generar sonidos (WAV)`) y **las 9 animaciones + 5 controladores se generan por
-script** (`Penales → Crear animaciones`).
+(`Penales → Generar sonidos (WAV)`) y **las 12 animaciones + 6 controladores se generan por
+script** (`Penales → Crear animaciones`): 9 clips para los interactivos y 3 para el **Blend Tree**
+de locomoción del jugador (ver `ENTREGABLE-2-Optimizacion.md`, sección 9).
 
 | Interactivo | Animación | Sonido |
 |---|---|---|
 | **Portón** de la entrada | La reja **se hunde** para abrir y **sube** para cerrar (0,90 s) | Reja metálica corrediza con traqueteo |
+| **Jugador** (locomoción) | **Blend Tree** 1D: quieto / caminar / correr mezclados por la velocidad real | — |
 | **Disparo del jugador** | El jugador se orienta hacia el tiro; el balón sale con física real | **Patada** (volumen según la carga) + aviso al 100 % |
 | **Pelota** | Rueda y rebota con física | **Bote** 3D en el punto del golpe (suelo, arco, cerco) |
 | **Arquero** | **Se inclina** (cuerpo y cabeza, ±30°) al lanzarse y vuelve solo | (el resultado del tiro lo sonifica el juez) |

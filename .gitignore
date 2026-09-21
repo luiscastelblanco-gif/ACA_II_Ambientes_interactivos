@@ -1,0 +1,67 @@
+# ============================================================
+#  Proyecto Penales - Unity 6000.5.6f1
+#  .gitignore estandar de Unity (Assets y ProjectSettings SI se versionan)
+# ============================================================
+
+# ---- Carpetas generadas por Unity (NO versionar) ----
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+[Cc]rashlytics/
+sysinfo.txt
+
+# ---- Las meta de los assets SI se versionan ----
+!/[Aa]ssets/**/*.meta
+
+# ---- Archivos de solucion / IDE (se regeneran solos) ----
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+ExportedObj/
+.consulo/
+.vs/
+.idea/
+.vscode/
+*README-MCP-IA.md
+
+# ---- Meta de archivos generados ----
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# ---- Builds / paquetes ----
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.exe
+*.zip
+[Ee]xports/
+
+# ---- Addressables empaquetados ----
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+
+# ---- Android temporal ----
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# ---- Respaldos del despliegue del puente MCP ----
+*/MCPForUnity_backup*/
